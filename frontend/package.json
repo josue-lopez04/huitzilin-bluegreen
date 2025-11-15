@@ -1,0 +1,7 @@
+{
+  "name": "huitzilin-frontend",
+  "version": "1.0.0",
+  "scripts": {
+    "build": "echo 'Simulando build del frontend' && mkdir -p dist && echo '<h1>Frontend activo</h1>' > dist/index.html"
+  }
+}

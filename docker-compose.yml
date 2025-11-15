@@ -1,0 +1,41 @@
+version: '3.8'
+services:
+  backend-blue:
+    build: ./backend
+    container_name: huitzilin-backend-blue
+    environment:
+      - NODE_ENV=production
+    ports:
+      - "4000:4000"
+    networks:
+      - huitzilin_net
+
+  backend-green:
+    build: ./backend
+    container_name: huitzilin-backend-green
+    environment:
+      - NODE_ENV=production
+    ports:
+      - "5000:4000"
+    networks:
+      - huitzilin_net
+
+  frontend-blue:
+    build: ./frontend
+    container_name: huitzilin-frontend-blue
+    ports:
+      - "8080:80"
+    networks:
+      - huitzilin_net
+
+  frontend-green:
+    build: ./frontend
+    container_name: huitzilin-frontend-green
+    ports:
+      - "8081:80"
+    networks:
+      - huitzilin_net
+
+networks:
+  huitzilin_net:
+    driver: bridge
