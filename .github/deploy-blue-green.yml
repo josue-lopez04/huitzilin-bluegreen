@@ -28,7 +28,7 @@ jobs:
           key: ${{ secrets.VPS_SSH_KEY }}
           script: |
             cd ~/huitzilin-bluegreen
-            git pull
+            git pull origin main
             bash scripts/deploy_to_green.sh
             curl http://localhost:5000/healthz || exit 1
             bash scripts/switch_to_green.sh
