@@ -1,0 +1,54 @@
+name: Deploy Blue-Green
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build & Push Docker images
+        run: |
+          docker build -t ghcr.io/${{ github.repository }}/backend:${{ github.sha }} ./backend
+          docker build -t ghcr.io/${{ github.repository }}/frontend:${{ github.sha }} ./frontend
+          echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+          docker push ghcr.io/${{ github.repository }}/backend:${{ github.sha }}
+          docker push ghcr.io/${{ github.repository }}/frontend:${{ github.sha }}
+
+      - name: Deploy to server (Blue-Green)
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script: |
+            cd ~/huitzilin-bluegreen
+            ACTIVE=$(bash scripts/detect_active.sh)
+            echo "Entorno activo actual: $ACTIVE"
+
+            if [ "$ACTIVE" == "BLUE" ]; then
+              echo "Desplegando en GREEN..."
+              bash scripts/deploy_to_green.sh
+              if curl -fs http://localhost:5000/healthz; then
+                bash scripts/switch_to_green.sh
+                bash scripts/set_active.sh GREEN
+                echo "✅ GREEN ahora es el entorno activo."
+              else
+                bash scripts/rollback_to_blue.sh
+              fi
+            else
+              echo "Desplegando en BLUE..."
+              docker compose build backend-blue frontend-blue
+              docker compose up -d backend-blue frontend-blue
+              if curl -fs http://localhost:4000/healthz; then
+                bash scripts/rollback_to_blue.sh
+                bash scripts/set_active.sh BLUE
+                echo "✅ BLUE ahora es el entorno activo."
+              else
+                bash scripts/switch_to_green.sh
+              fi
+
