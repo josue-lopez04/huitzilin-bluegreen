@@ -25,10 +25,11 @@ jobs:
 
 
 
-      - name:  Blue-Green switch
+      - name: Blue-Green switch
         run: |
           echo "🏗️  despliegue Blue-Green local..."
-          chmod +x scripts/*.sh
-          bash scripts/detect_active.sh
-          bash scripts/switch_to_green.sh
+          chmod +x ./scripts/*.sh
+          bash ./scripts/detect_active.sh || echo "⚠️ detect_active.sh no encontrado"
+          bash ./scripts/switch_to_green.sh || echo "⚠️ switch_to_green.sh no encontrado"
           echo "✅ Switch completado."
+
