@@ -61,3 +61,10 @@ jobs:
                 echo "❌ Fallo en BLUE, manteniendo GREEN."
               fi
 
+      - name: Simulate Blue-Green switch (local test)
+        run: |
+          echo "🏗️ Simulando despliegue Blue-Green local..."
+          chmod +x scripts/*.sh
+          bash scripts/detect_active.sh
+          bash scripts/switch_to_green.sh
+          echo "✅ Switch simulado completado."
