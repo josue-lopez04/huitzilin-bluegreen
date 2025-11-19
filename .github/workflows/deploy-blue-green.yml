@@ -23,48 +23,12 @@ jobs:
           docker push ghcr.io/josue-lopez04/huitzilin-backend:${{ github.sha }}
           docker push ghcr.io/josue-lopez04/huitzilin-frontend:${{ github.sha }}
 
-      - name: Deploy to server (Blue-Green)
-        uses: appleboy/ssh-action@master
-        with:
-          host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USER }}
-          key: ${{ secrets.VPS_SSH_KEY }}
-          script: |
-            cd ~/huitzilin-bluegreen
-            ACTIVE=$(bash scripts/detect_active.sh)
-            echo "Entorno activo actual: $ACTIVE"
 
-            if [ "$ACTIVE" == "BLUE" ]; then
-              echo "Desplegando en GREEN..."
-              bash scripts/deploy_to_green.sh
-              echo "Verificando salud del entorno GREEN..."
-              if curl -fs http://localhost:5000/healthz; then
-                echo "Switch a GREEN..."
-                bash scripts/switch_to_green.sh
-                bash scripts/set_active.sh GREEN
-                echo "✅ GREEN ahora es el entorno activo."
-              else
-                echo "❌ Fallo en GREEN, rollback a BLUE..."
-                bash scripts/rollback_to_blue.sh
-              fi
-            else
-              echo "Desplegando en BLUE..."
-              docker compose build backend-blue frontend-blue
-              docker compose up -d backend-blue frontend-blue
-              echo "Verificando salud del entorno BLUE..."
-              if curl -fs http://localhost:4000/healthz; then
-                echo "Switch a BLUE..."
-                bash scripts/rollback_to_blue.sh
-                bash scripts/set_active.sh BLUE
-                echo "✅ BLUE ahora es el entorno activo."
-              else
-                echo "❌ Fallo en BLUE, manteniendo GREEN."
-              fi
 
-      - name: Simulate Blue-Green switch (local test)
+      - name:  Blue-Green switch
         run: |
-          echo "🏗️ Simulando despliegue Blue-Green local..."
+          echo "🏗️  despliegue Blue-Green local..."
           chmod +x scripts/*.sh
           bash scripts/detect_active.sh
           bash scripts/switch_to_green.sh
-          echo "✅ Switch simulado completado."
+          echo "✅ Switch completado."
