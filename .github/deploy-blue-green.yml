@@ -1,5 +1,4 @@
 name: Deploy Blue-Green
-
 on:
   push:
     branches: [ "main" ]
@@ -12,7 +11,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Build & Push Images
+      - name: Build & Push Docker images
         run: |
           docker build -t ghcr.io/${{ github.repository }}/backend:${{ github.sha }} ./backend
           docker build -t ghcr.io/${{ github.repository }}/frontend:${{ github.sha }} ./frontend
@@ -20,7 +19,7 @@ jobs:
           docker push ghcr.io/${{ github.repository }}/backend:${{ github.sha }}
           docker push ghcr.io/${{ github.repository }}/frontend:${{ github.sha }}
 
-      - name: Deploy to Green
+      - name: Deploy to server (Blue-Green)
         uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.VPS_HOST }}
@@ -28,7 +27,32 @@ jobs:
           key: ${{ secrets.VPS_SSH_KEY }}
           script: |
             cd ~/huitzilin-bluegreen
-            git pull origin main
-            bash scripts/deploy_to_green.sh
-            curl http://localhost:5000/healthz || exit 1
-            bash scripts/switch_to_green.sh
+            ACTIVE=$(bash scripts/detect_active.sh)
+            echo "Entorno activo actual: $ACTIVE"
+
+            if [ "$ACTIVE" == "BLUE" ]; then
+              echo "Desplegando en GREEN..."
+              bash scripts/deploy_to_green.sh
+              echo "Verificando salud del entorno GREEN..."
+              if curl -fs http://localhost:5000/healthz; then
+                echo "Switch a GREEN..."
+                bash scripts/switch_to_green.sh
+                bash scripts/set_active.sh GREEN
+                echo "✅ GREEN ahora es el entorno activo."
+              else
+                echo "❌ Fallo en GREEN, rollback a BLUE..."
+                bash scripts/rollback_to_blue.sh
+              fi
+            else
+              echo "Desplegando en BLUE..."
+              docker compose build backend-blue frontend-blue
+              docker compose up -d backend-blue frontend-blue
+              echo "Verificando salud del entorno BLUE..."
+              if curl -fs http://localhost:4000/healthz; then
+                echo "Switch a BLUE..."
+                bash scripts/rollback_to_blue.sh
+                bash scripts/set_active.sh BLUE
+                echo "✅ BLUE ahora es el entorno activo."
+              else
+                echo "❌ Fallo en BLUE, manteniendo GREEN."
+              fi
