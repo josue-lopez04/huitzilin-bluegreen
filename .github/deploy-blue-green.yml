@@ -13,11 +13,14 @@ jobs:
 
       - name: Build & Push Docker images
         run: |
-          docker build -t ghcr.io/${{ github.repository }}/backend:${{ github.sha }} ./backend
-          docker build -t ghcr.io/${{ github.repository }}/frontend:${{ github.sha }} ./frontend
+          docker build -t ghcr.io/${{ github.actor }}/huitzilin-backend:${{ github.sha }} ./backend
+          docker build -t ghcr.io/${{ github.actor }}/huitzilin-frontend:${{ github.sha }} ./frontend
+
+
           echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
-          docker push ghcr.io/${{ github.repository }}/backend:${{ github.sha }}
-          docker push ghcr.io/${{ github.repository }}/frontend:${{ github.sha }}
+          docker push ghcr.io/${{ github.actor }}/huitzilin-backend:${{ github.sha }}
+          docker push ghcr.io/${{ github.actor }}/huitzilin-frontend:${{ github.sha }}
+
 
       - name: Deploy to server (Blue-Green)
         uses: appleboy/ssh-action@master
