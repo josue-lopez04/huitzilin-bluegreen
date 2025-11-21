@@ -1,7 +1,25 @@
 #!/bin/bash
-set -e
-echo "🔁 Cambiando tráfico hacia GREEN..."
-sed -i '' 's/backend-blue:4000/backend-green:4000/' nginx/blue-green.conf
-sed -i '' 's/frontend-blue:80/frontend-green:80/' nginx/blue-green.conf
-docker exec huitzilin-nginx nginx -s reload || docker restart huitzilin-nginx
-echo "✅ Tráfico cambiado a GREEN."
+CONF_FILE="./nginx/blue-green.conf"
+
+if [ ! -f "$CONF_FILE" ]; then
+  echo " No se encontró $CONF_FILE, creando archivo temporal..."
+  mkdir -p ./nginx
+  cat > $CONF_FILE <<EOL
+upstream backend_active {
+    server huitzilin-backend-blue:4000;
+}
+
+server {
+    listen 80;
+    location / {
+        proxy_pass http://backend_active;
+    }
+}
+EOL
+fi
+
+echo " Cambiando tráfico hacia GREEN..."
+sed -i 's/huitzilin-backend-blue:4000/huitzilin-backend-green:4000/' "$CONF_FILE"
+sed -i 's/huitzilin-frontend-blue:80/huitzilin-frontend-green:80/' "$CONF_FILE"
+echo " Tráfico cambiado a GREEN en $CONF_FILE"
+
